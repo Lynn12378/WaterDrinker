@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>訓練說話者模型</title>
+    <link rel="stylesheet" type="text/css" href="myStyle.css">
+</head>
+<body>
+    <main>
+        <h1>訓練說話者模型</h1>
+        <hr>
+        <div>
+            範例:
+            1.請給我一杯水
+            2.幫我倒一杯水
+            3.我要一杯水
+        </div>
+        <div id="btns">
+            <button id="startRecord">開始錄音</button>
+            <button id="stopRecord" disabled>停止錄音</button>
+        </div>
+        <div id="audioContainer" class="scroll-container">
+            <ul id="audioList"></ul>
+        </div>
+        <button id="trainModel">訓練模型</button>
+        <button id="recognizeSpeaker">辨識說話者</button>
+    </main>
+    <script>
+        const startRecordBtn = document.getElementById('startRecord');
+        const stopRecordBtn = document.getElementById('stopRecord');
+        const trainModelBtn = document.getElementById('trainModel');
+        const audioContainer = document.getElementById('audioContainer');
+        const recognizeSpeakerBtn = document.getElementById('recognizeSpeaker');
+        let audioChunks = [];
+        let mediaRecorder;
+        let audioCount = 1;
+        let websocket;
+
+        startRecordBtn.addEventListener('click', startRecording);
+        stopRecordBtn.addEventListener('click', stopRecording);
+        trainModelBtn.addEventListener('click', trainModel);
+        recognizeSpeakerBtn.addEventListener('click', recognizeSpeaker);
+
+        function startRecording() {
+            let startTime; // 記錄開始錄音的時間
+            let stopRecordingTimeout; // 記錄停止錄音的定時器
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstart = () => {
+                    startTime = Date.now();
+                    // 設定5秒後停止錄音
+                    stopRecordingTimeout = setTimeout(() => {
+                        stopRecording();
+                    }, 5000);
+                };
+
+                mediaRecorder.onstop = () => {
+                    clearTimeout(stopRecordingTimeout); // 清除停止錄音的定時器
+
+                    const recordingDuration = (Date.now() - startTime) / 1000; // 計算錄音時間（秒）
+
+                    if (recordingDuration >= 2) {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `
+                            <audio controls src="${URL.createObjectURL(audioBlob)}"></audio> 
+                            錄音 ${audioCount} (${recordingDuration.toFixed(2)} 秒)
+                            <button class="deleteBtn" onclick="deleteRecording(this)">刪除</button>`;
+                        audioList.appendChild(listItem);
+                        audioCount++;
+                    } else {
+                        console.log("錄音時長不足2秒，拋棄錄音。");
+                    }
+
+                    audioChunks = [];
+                    audioContainer.scrollTop = audioContainer.scrollHeight;
+                    startRecordBtn.disabled = false; // 啟用開始錄音按鈕
+                    stopRecordBtn.disabled = true; // 使停止錄音按鈕無效
+                };
+
+                mediaRecorder.start();
+                startRecordBtn.disabled = true;
+                // 啟動計時器，2秒後啟用停止錄音按鈕
+                setTimeout(() => {
+                    stopRecordBtn.disabled = false;
+                }, 2000);
+            })
+            .catch(error => console.error('Error accessing microphone:', error));
+        }
+
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            startRecordBtn.disabled = false;
+            stopRecordBtn.disabled = true;
+        }
+
+        function deleteRecording(button) {
+            const listItem = button.parentElement;
+            listItem.remove();
+        }
+
+        function trainModel() {
+        // 建立 WebSocket 連接
+        websocket = new WebSocket('ws://localhost:8765');
+
+        websocket.onopen = function (event) {
+            // 發送 base64 編碼的音頻數據
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const reader = new FileReader();
+
+            reader.onloadend = function () {
+                websocket.send(reader.result.split(',')[1]);
+            };
+
+            reader.readAsDataURL(audioBlob);
+        };
+
+        websocket.onclose = function () {
+            // 在WebSocket關閉後執行模型訓練等相關操作
+            console.log("WebSocket closed. Perform model training here.");
+            
+            // Call your function to build and train the model here
+            buildModel();
+        };
+        }
+        function recognizeSpeaker() {
+            // 檢查是否有錄音
+            const recordedItems = document.querySelectorAll('#audioList li'); 
+            if (recordedItems.length === 0) {
+                alert("請先錄製音頻！");
+                return;
+            }
+
+            // 建立 WebSocket 連接
+            websocket = new WebSocket('ws://localhost:8766');
+
+            websocket.onopen = function (event) {
+                // 發送 base64 編碼的音頻數據
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const reader = new FileReader();
+
+                reader.onloadend = function () {
+                    websocket.send(reader.result.split(',')[1]);
+                };
+
+                reader.readAsDataURL(audioBlob);
+            };
+
+            websocket.onmessage = function (event) {
+                // 接收後端的預測結果
+                const prediction = event.data;
+                console.log("Message received:", prediction); // 添加 log 記錄
+                alert(`辨識結果：說話者 ${prediction}`);
+            };
+        }
+    </script>
+</body>
+</html>
