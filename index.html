@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>訓練說話者模型</title>
     <link rel="stylesheet" type="text/css" href="myStyle.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.3/socket.io.js"></script>
 </head>
 <body>
     <main>
@@ -27,6 +28,8 @@
         <button id="recognizeSpeaker">辨識說話者</button>
     </main>
     <script>
+        const socket = io(); // 預設連線到伺服器的根目錄
+
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const trainModelBtn = document.getElementById('trainModel');
