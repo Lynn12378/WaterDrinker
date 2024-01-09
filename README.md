@@ -1,3 +1,3 @@
 # WaterDrinker
 
-[![Watch the video]([WDDemo.mp4])
+[![Watch the video](https://raw.githubusercontent.com/Lynn12378/WaterDrinker/raw/main/WDDemo.mp4)
