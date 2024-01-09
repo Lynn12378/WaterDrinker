@@ -1,13 +1,6 @@
 # WaterDrinker
 
-你的项目的简要介绍。
+![image](https://github.com/Lynn12378/WaterDrinker/assets/91118182/5fccb7a0-9d06-4647-80d7-309d452f5ff7)
 
-## 示例视频
 
-使用 HTML 的 video 标签嵌入视频：
 
-```html
-<video width="640" height="360" controls>
-  <source src="https://raw.githubusercontent.com/Lynn12378/WaterDrinker/main/WDDemo.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
